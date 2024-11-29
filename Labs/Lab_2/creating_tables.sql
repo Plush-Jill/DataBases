@@ -1,10 +1,13 @@
 
+
+
+CREATE TYPE NecessityType AS ENUM ('necessary', 'not_necessary');
+
 CREATE TABLE categories(
     category_id INT PRIMARY KEY,
     name VARCHAR(50) NOT NULL,
-    necessity BOOLEAN DEFAULT FALSE
+    necessity NecessityType
 );
-
 CREATE TABLE components(
     component_id INT PRIMARY KEY,
     name VARCHAR(50) NOT NULL UNIQUE,

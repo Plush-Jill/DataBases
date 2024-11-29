@@ -91,7 +91,7 @@ CREATE TABLE lessons (
 );
 
 
-CREATE TYPE LessonType AS ENUM ('lecture', 'practice', 'lab');
+CREATE TYPE LessonType AS ENUM ('lecture', 'practice', 'lab'); -- сделал вид пары как enum
 
 CREATE TABLE schedule (
     semester_id INT,

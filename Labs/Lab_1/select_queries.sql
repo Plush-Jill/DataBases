@@ -14,12 +14,11 @@ AND semesters.start_date >= CURRENT_DATE - INTERVAL '2 years';
 
 -- 2. Выбрать все группы и среднюю успеваемость в них.
 SELECT groups.group_id,
-       AVG(academic_performance.mark) AS average_mark
+       AVG(academic_performance.mark) AS average_mark -- вернёт null если вообще все оценки не выставлены, если у группы будут не все оценки, null поля игнорируются
 FROM groups
          JOIN group_memberships ON groups.group_id = group_memberships.group_id
          LEFT JOIN academic_performance ON group_memberships.student_id = academic_performance.student_id
 GROUP BY groups.group_id;
--- WHERE average_mark >= 4;
 
 -- 3. Выбрать преподавателей, у которых студентов-отличников больше 10.
 SELECT teachers.teacher_id,
@@ -27,7 +26,7 @@ SELECT teachers.teacher_id,
        teachers.name,
        teachers.patronymic
 FROM teachers
-    JOIN academic_performance ON teachers.teacher_id = academic_performance.teacher_id
+    JOIN academic_performance ON teachers.teacher_id = academic_performance.teacher_id -- переделал на один join
 WHERE academic_performance.mark = 5
 GROUP BY teachers.teacher_id, teachers.surname, teachers.name, teachers.patronymic
 HAVING COUNT(DISTINCT academic_performance.student_id) > 10;
@@ -87,7 +86,7 @@ SELECT teachers.teacher_id,
        COUNT(schedule.subject_id) AS mismatch_count
 FROM teachers
     JOIN schedule ON teachers.teacher_id = schedule.teacher_id
-    JOIN semesters ON schedule.semester_id = semesters.semester_id
+    JOIN semesters ON schedule.semester_id = semesters.semester_id --убрал join со специализацией преподавателей
 WHERE semesters.start_date >= CURRENT_DATE - INTERVAL '1 year'
     AND NOT EXISTS(
         SELECT 1
@@ -135,10 +134,42 @@ WHERE academic_performance.mark = 2
         SELECT 1
         FROM academic_performance inner_ap
         WHERE inner_ap.teacher_id = academic_performance.teacher_id
-        AND inner_ap.subject_id = academic_performance.subject_id
+--         AND inner_ap.subject_id = academic_performance.subject_id
         AND inner_ap.mark = 2
         GROUP BY inner_ap.teacher_id
         HAVING COUNT(inner_ap.student_id) >= 2
-    )
+    );
+
+SELECT students.student_id,
+       students.surname,
+       students.name,
+       students.patronymic
+FROM students
+         JOIN academic_performance ON students.student_id = academic_performance.student_id
+WHERE academic_performance.mark = 2
+GROUP BY
+    academic_performance.teacher_id,
+    academic_performance.subject_id,
+    academic_performance.mark
+HAVING COUNT(academic_performance.student_id) >= 2;
+
+
+
+SELECT students.student_id,
+       students.surname,
+       students.name,
+       students.patronymic
+FROM students
+    JOIN academic_performance ON students.student_id = academic_performance.student_id
+WHERE academic_performance.mark = 2
+    AND academic_performance.teacher_id IN (
+        SELECT academic_performance.teacher_id
+        FROM academic_performance
+        WHERE academic_performance.mark = 2
+        GROUP BY academic_performance.teacher_id
+        HAVING COUNT(academic_performance.student_id) >= 2
+    );
+
+
 
 
