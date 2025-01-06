@@ -140,35 +140,20 @@ WHERE academic_performance.mark = 2
         HAVING COUNT(inner_ap.student_id) >= 2
     );
 
-SELECT students.student_id,
-       students.surname,
-       students.name,
-       students.patronymic
-FROM students
-         JOIN academic_performance ON students.student_id = academic_performance.student_id
-WHERE academic_performance.mark = 2
-GROUP BY
-    academic_performance.teacher_id,
-    academic_performance.subject_id,
-    academic_performance.mark
-HAVING COUNT(academic_performance.student_id) >= 2;
 
 
 
-SELECT students.student_id,
-       students.surname,
-       students.name,
-       students.patronymic
-FROM students
-    JOIN academic_performance ON students.student_id = academic_performance.student_id
-WHERE academic_performance.mark = 2
-    AND academic_performance.teacher_id IN (
-        SELECT academic_performance.teacher_id
-        FROM academic_performance
-        WHERE academic_performance.mark = 2
-        GROUP BY academic_performance.teacher_id
-        HAVING COUNT(academic_performance.student_id) >= 2
-    );
+-- 9. Найти всех студентов, получивших 2 у одного преподавателя на одной сессии. Переделать. >=2 студентов 2 от одного и того же преподавателя.
+select academic_performance.student_id
+from academic_performance
+where academic_performance.mark = 2
+and academic_performance.teacher_id in (
+    select teacher_id
+    from academic_performance
+    where mark = 2
+    group by teacher_id
+    having count(*) >= 2
+);
 
 
 
