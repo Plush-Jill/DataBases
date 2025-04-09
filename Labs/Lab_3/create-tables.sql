@@ -33,7 +33,7 @@ create table routes (
     unique (departure_station, destination_station)
 );
 
-create table route_stations(
+create table route_stations_order(
     route_id int references routes(id),
     station_id int references stations(id),
     stop_order int,
@@ -91,8 +91,22 @@ create table employees (
     brigade int references trains(id)
 );
 
+create table free_seats (
+    schedule_id int references schedule_routes(id), -- Конкретная поездка
+    departure_station_id int references stations(id),         -- Станция маршрута
+    destination_station_id int references stations(id),         -- Станция маршрута
+    seat_category SeatCategory not null,            -- Категория мест
+    free_seats int not null,                        -- Количество свободных мест
+    primary key (schedule_id, departure_station_id, destination_station_id, seat_category)
+);
 
 
--- 1. Написать оптимальный запрос,
--- выбирающий поставщиков самых дорогих продуктов среди тех, которые поставляют продукты, начинающиеся на букву "А".
--- Таблицы: Поставщики (ПС, ПС_Название), Поставки (ID, ПС, ПР, Дата), Продукты (ПР, ПР_Название, Цена).
+
+-- create table occupied_seats (
+--     id serial primary key,
+--     schedule_id int references schedule_routes(id),
+--     departure_station int references stations(id),
+--     destination_station int references stations(id),
+--     seat_category SeatCategory not null ,
+--     occupied_count int not null -- Число занятых мест на данном участке
+-- );

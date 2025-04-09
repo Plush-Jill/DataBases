@@ -6,7 +6,7 @@ import psycopg
 import random
 
 hostname = 'localhost'
-database = 'lab_3'
+database = 'DB-5-sem'
 username = 'postgres'
 password = '3255'
 port_id = 5432
@@ -118,9 +118,9 @@ def insert_train_structs(db_connect):
 
 def insert_routes(db_connect):
     with db_connect.cursor() as cursor:
-        cursor.execute("TRUNCATE TABLE route_stations CASCADE")
-        cursor.execute("TRUNCATE TABLE routes CASCADE")
-        cursor.execute("ALTER SEQUENCE routes_id_seq RESTART WITH 1")
+        cursor.execute("truncate table route_stations_order cascade")
+        cursor.execute("truncate table routes cascade")
+        cursor.execute("alter sequence routes_id_seq restart with 1")
 
         routes = []
         route_stations = []
@@ -146,7 +146,7 @@ def insert_routes(db_connect):
 
         # Вставляем данные в route_stations
         insert_script = """
-        insert into route_stations (route_id, station_id, stop_order)
+        insert into route_stations_order (route_id, station_id, stop_order)
         values (%s, %s, %s)
         """
         cursor.executemany(insert_script, route_stations)
@@ -157,49 +157,43 @@ def insert_routes(db_connect):
 def insert_schedule(db_connect):
     with db_connect.cursor() as cursor:
         # Очистка таблиц расписаний
-        cursor.execute("TRUNCATE TABLE schedule_time CASCADE")
-        cursor.execute("TRUNCATE TABLE schedule_routes CASCADE")
-        cursor.execute("ALTER SEQUENCE schedule_routes_id_seq RESTART WITH 1")
+        cursor.execute("truncate table schedule_time cascade")
+        cursor.execute("truncate table schedule_routes cascade")
+        cursor.execute("alter sequence schedule_routes_id_seq restart with 1")
 
-        # Получаем маршруты поездов
         cursor.execute("""
-            SELECT r.id, r.departure_station, r.destination_station
-            FROM routes r
-            ORDER BY r.id
+            select r.id, r.departure_station, r.destination_station
+            from routes r
+            order by r.id
         """)
-        routes = cursor.fetchall()  # [(route_id, departure_station, destination_station), ...]
+        routes = cursor.fetchall()
 
         schedule_routes = []
         schedule_times = []
 
-        # Генерация расписаний
-        for train_id in range(1, trains_count + 1):
+        for train_id in range(1, 20):
             for route_id, departure_station, destination_station in routes:
-                # Вставка маршрута в расписание
                 cursor.execute(
                     """
-                    INSERT INTO schedule_routes (route_id, train_id)
-                    VALUES (%s, %s) RETURNING id
+                    insert into schedule_routes (route_id, train_id)
+                    values (%s, %s) RETURNING id
                     """,
                     (route_id, train_id)
                 )
                 schedule_id = cursor.fetchone()[0]
 
-                # Получаем станции маршрута
                 cursor.execute("""
-                    SELECT station_id, stop_order
-                    FROM route_stations
-                    WHERE route_id = %s
-                    ORDER BY stop_order
+                    select station_id, stop_order
+                    from route_stations_order
+                    where route_id = %s
+                    order by stop_order
                 """, (route_id,))
 
-                route_stations = cursor.fetchall()  # [(station_id, stop_order), ...]
+                route_stations = cursor.fetchall()
 
-                # Сохраняем предыдущее время отправления
                 previous_departure = datetime.now()
 
                 for index, (station_id, stop_order) in enumerate(route_stations):
-                    # Время до следующей станции и случайная задержка
                     travel_time = timedelta(minutes=randint(30, 120))
                     delay_minutes = randint(0, 10)
 
@@ -210,29 +204,26 @@ def insert_schedule(db_connect):
                         arrival_time = previous_departure + travel_time
                         departure_time = arrival_time + timedelta(minutes=randint(5, 15))
 
-                    # Фактическое прибытие с задержкой
                     real_arrival_time = arrival_time + timedelta(minutes=delay_minutes)
 
-                    # Добавляем запись в расписание времени
                     schedule_times.append((
                         schedule_id,
                         station_id,
                         arrival_time,
                         real_arrival_time,
-                        departure_time - arrival_time  # Продолжительность остановки
+                        departure_time - arrival_time
                     ))
 
                     previous_departure = departure_time
 
-        # Вставляем данные в schedule_time
         insert_script = """
-        INSERT INTO schedule_time (
+        insert into schedule_time (
             schedule_id,
             station_id,
             planned_arrival_time,
             real_arrival_time,
             stop_duration
-        ) VALUES (%s, %s, date_trunc('minute', %s), date_trunc('minute', %s), %s)
+        ) values (%s, %s, date_trunc('minute', %s), date_trunc('minute', %s), %s)
         """
         cursor.executemany(insert_script, schedule_times)
 
@@ -244,31 +235,26 @@ def insert_passengers_trips(db_connect):
         cursor.execute("truncate table passengers_trips cascade")
         cursor.execute("alter sequence passengers_trips_id_seq restart with 1")
 
-        cursor.execute("SELECT id FROM passengers")
+        cursor.execute("select id from passengers")
         passengers_ids = [row[0] for row in cursor.fetchall()]
 
-        cursor.execute("SELECT id, train_id FROM schedule")
-        schedule_data = cursor.fetchall()  # [(schedule_id, train_id), ...]
+        cursor.execute("select id, train_id from schedule_routes")
+        schedule_data = cursor.fetchall()
 
-        # Условные категории мест
         seat_categories = ['reserved', 'coupe', 'suite']
 
         trips = []
 
-        # Случайное распределение поездок
         for passenger_id in random.sample(passengers_ids, k = len(passengers_ids)):  # Уникальные пассажиры
             schedule_id, train_id = random.choice(schedule_data)
 
-            # Определение категории места для поездки
             seat_category = random.choice(seat_categories)
 
-            # Добавление записи
             trips.append((passenger_id, schedule_id, seat_category))
 
-        # Вставка данных в таблицу
         insert_script = """
-        INSERT INTO passengers_trips (passenger_id, schedule_id, seat_category) 
-        VALUES (%s, %s, %s)
+        insert into passengers_trips (passenger_id, schedule_id, seat_category) 
+        values (%s, %s, %s)
         """
         cursor.executemany(insert_script, trips)
         db_connect.commit()
@@ -279,58 +265,53 @@ def insert_employees(db_connect):
         cursor.execute("truncate table employees cascade")
         cursor.execute("alter sequence employees_id_seq restart with 1")
 
-        # Данные для заполнения
         names = ["Игорь", "Владимир", "Юрий", "Михаил", "Александр", "Дмитрий", "Егор", "Владислав", "Илья"]
         surnames = ["Мангараков", "Бокк", "Вегрен", "Бирюля", "Кардаш", "Лутцев", "Загнеев", "Давыдов", "Бочкарёв", "Перетятько",
                     "Новиков"]
         patronymics = ["Дмитриевич", "Валерьевич", "Сергеевич", "Витальевич", "Владимирович", "Дмитриевич", "Александрович",
                        "Игоревич"]
-        positions = ["pos-1", "pos-2", "pos-3", "pos-4", "pos-5"]  # Перечисленные позиции
+        positions = ["pos-1", "pos-2", "pos-3", "pos-4", "pos-5"]
 
         cursor.execute("""
                     select t.id as train_id, s.city as head_station_city 
                     from trains t
                     join stations s on t.head_station = s.id
                 """)
-        train_data = cursor.fetchall()  # [(train_id, head_station_city), ...]
+        train_data = cursor.fetchall()
 
         cursor.execute("select distinct city from stations")
-        available_cities = [row[0] for row in cursor.fetchall()]  # Список уникальных городов
+        available_cities = [row[0] for row in cursor.fetchall()]
 
         employees = []
-        created_employees = {position: [] for position in positions}  # Группируем сотрудников по должности
+        created_employees = {position: [] for position in positions}
 
         emp_id = 1
-        while emp_id <= employees_count:  # Генерация 50 сотрудников
+        while emp_id <= employees_count:
             name = random.choice(names)
             surname = random.choice(surnames)
             patronymic = random.choice(patronymics)
             position = random.choice(positions)
             city = random.choice(available_cities)
 
-            # Выбираем поезд для бригады, если город совпадает с головной станцией
             local_trains = [train_id for train_id, head_station_city in train_data if head_station_city == city]
-            if not local_trains:  # Если нет поездов, формируемых в этом городе, пропускаем
+            if not local_trains:
                 continue
             brigade = random.choice(local_trains)
 
-            # Назначение начальника (для всех кроме pos-1)
             supervisor_id = None
             if position != "pos-1":
                 higher_position_index = positions.index(position) - 1
                 higher_position = positions[higher_position_index]
                 possible_supervisors = [emp for emp in created_employees[higher_position] if emp[1] == city]
-                if not possible_supervisors:  # Если нет подходящих начальников, пропускаем
+                if not possible_supervisors:
                     continue
                 supervisor_id = random.choice(possible_supervisors)[0]
 
-            # Добавляем сотрудника в список
             employees.append((emp_id, name, surname, patronymic, position, supervisor_id, city, brigade))
-            created_employees[position].append((emp_id, city))  # Обновляем список созданных сотрудников
+            created_employees[position].append((emp_id, city))
 
-            emp_id += 1  # Переходим к следующему сотруднику
+            emp_id += 1
 
-        # Вставка данных
         insert_script = """
                 insert into employees (id, name, surname, patronymic, position, supervisor_id, city, brigade) 
                 values (%s, %s, %s, %s, %s, %s, %s, %s)
@@ -338,6 +319,54 @@ def insert_employees(db_connect):
         cursor.executemany(insert_script, employees)
         db_connect.commit()
 
+
+def insert_free_seats(db_connect):
+    with db_connect.cursor() as cursor:
+        cursor.execute("truncate table free_seats cascade")
+
+        cursor.execute("""
+            select sr.id as schedule_id, sr.train_id, r.id as route_id
+            from schedule_routes sr
+            join routes r on sr.route_id = r.id
+        """)
+        schedules = cursor.fetchall()
+
+        free_seats_data = []
+
+        for schedule_id, train_id, route_id in schedules:
+            cursor.execute("""
+                select reserved_tickets_count, coupe_tickets_count, suite_tickets_count
+                from train_struct
+                where train_number = %s
+            """, (train_id,))
+            train_struct = cursor.fetchone()
+
+            reserved_count, coupe_count, suite_count = train_struct
+
+            cursor.execute("""
+                select station_id, stop_order
+                from route_stations_order
+                where route_id = %s
+                order by stop_order
+            """, (route_id,))
+            route_stations = cursor.fetchall()
+
+            for i in range(len(route_stations)):
+                for j in range(i + 1, len(route_stations)):
+                    departure_station_id = route_stations[i][0]
+                    destination_station_id = route_stations[j][0]
+
+                    # Добавляем запись для каждой категории мест
+                    free_seats_data.append((schedule_id, departure_station_id, destination_station_id, 'reserved', randint(0, reserved_count)))
+                    free_seats_data.append((schedule_id, departure_station_id, destination_station_id, 'coupe', randint(0, coupe_count)))
+                    free_seats_data.append((schedule_id, departure_station_id, destination_station_id, 'suite', randint(0, suite_count)))
+
+        insert_script = """
+            insert into free_seats (schedule_id, departure_station_id, destination_station_id, seat_category, free_seats)
+            values (%s, %s, %s, %s, %s)
+        """
+        cursor.executemany(insert_script, free_seats_data)
+        db_connect.commit()
 
 def insert(db_connect):
     print("inserting...")
@@ -355,6 +384,17 @@ def insert(db_connect):
 
     print("insert_routes()...")
     insert_routes(db_connect)
+
+
+    print("insert_schedule()...")
+    insert_schedule(db_connect)
+
+    print("insert_passengers_trips()...")
+    insert_passengers_trips(db_connect)
+
+    print("insert_free_seats()...")
+    insert_free_seats(db_connect)
+
     #
     # print("insert_schedule()...")
     # insert_schedule(db_connect)
@@ -385,6 +425,7 @@ def main():
 
         db_connect.autocommit = True
         print("connected to database")
+        exit()
         # return
         with db_connect.cursor() as cursor:
             cursor.execute("set search_path to public")
