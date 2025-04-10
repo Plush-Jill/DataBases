@@ -2,13 +2,13 @@ from random import randint
 from datetime import datetime, time, timedelta
 import psycopg
 import matplotlib.pyplot as plt
-import networkx as nx
+import networkx
 import random
 
 INTEGER_MAX = 2147483647
 
 hostname = 'localhost'
-database = 'sem-2'
+database = 'DB-project'
 username = 'postgres'
 password = '3255'
 port = 5432
@@ -89,13 +89,13 @@ def insert_passengers(db_connect):
         cursor.executemany(insert_script, passengers)
 def create_graph():
     global graph
-    graph = nx.gnm_random_graph(num_nodes, num_edges, seed)
+    graph = networkx.gnm_random_graph(num_nodes, num_edges, seed)
 
     random.seed(seed)
     for edge_begin, edge_end in graph.edges():
         graph[edge_begin][edge_end]['weight'] = random.randint(100, 1000)
 
-    adj_matrix = nx.to_numpy_array(graph)
+    adj_matrix = networkx.to_numpy_array(graph)
     matrix_length = adj_matrix.shape
     for i in range(matrix_length[0]):
         for j in range(matrix_length[0]):

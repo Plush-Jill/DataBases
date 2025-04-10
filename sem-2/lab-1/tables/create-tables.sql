@@ -83,7 +83,8 @@ create table schedule_time (
 );
 
 create table delay (
-    schedule_record int primary key references schedule_time(id) on delete cascade not null,
+    id serial primary key,
+    schedule_record int references schedule_time(id) on delete cascade not null,
     arrival_delay interval not null default interval '0 second',
     departure_delay interval not null default '0 second'
 );
