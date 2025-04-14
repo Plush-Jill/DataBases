@@ -4,16 +4,25 @@ drop table if exists department_stores_sections cascade;
 drop table if exists department_stores_halls cascade;
 drop table if exists department_stores_employees cascade;
 drop table if exists department_stores_sections_managers cascade;
+drop table if exists department_stores_sellers cascade;
 drop table if exists shops cascade;
 drop table if exists kiosks cascade;
 drop table if exists stalls cascade;
 drop table if exists shops cascade;
-drop table if exists users cascade;
 drop table if exists providers cascade;
 drop table if exists product_directory cascade;
 drop table if exists providers_product_list cascade;
 drop table if exists users cascade;
-drop table if exists users cascade;
+
+
+create table users (
+    id serial primary key,
+    email varchar,
+    password varchar,
+    registration_date timestamp default now()
+);
+insert into users (email, password) values ('test@example.com', '123456');
+
 
 -- Поставщики товаров
 create table providers (
@@ -33,13 +42,6 @@ create table providers_product_list (
     product int not null references product_directory(id),
 
     unique (provider, product)
-);
-
-create table users (
-    id serial primary key,
-    mail varchar,
-    password_hash varchar,
-    registration_date timestamp default now()
 );
 
 -- Универмаги
@@ -71,7 +73,7 @@ create table department_stores_halls (
 );
 
 -- Продавцы в универмагах
-create table departament_stores_sellers (
+create table department_stores_sellers (
     id serial primary key,
     hall int not null references department_stores_halls(id)
 );
